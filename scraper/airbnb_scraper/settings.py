@@ -17,7 +17,7 @@ NEWSPIDER_MODULE = "airbnb_scraper.spiders"
 #USER_AGENT = "airbnb_scraper (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32
@@ -90,3 +90,31 @@ ROBOTSTXT_OBEY = True
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+
+# # scrapy splash settings
+
+# # Splash Server Endpoint
+# SPLASH_URL = 'http://localhost:8050'
+
+
+# # Enable Splash downloader middleware and change HttpCompressionMiddleware priority
+# DOWNLOADER_MIDDLEWARES = {
+#     'scrapy_splash.SplashCookiesMiddleware': 723,
+#     'scrapy_splash.SplashMiddleware': 725,
+#     'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': 810,
+# }
+
+# # Enable Splash Deduplicate Args Filter
+# SPIDER_MIDDLEWARES = {
+#     'scrapy_splash.SplashDeduplicateArgsMiddleware': 100,
+# }
+
+# # Define the Splash DupeFilter
+# DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
+
+DOWNLOAD_HANDLERS = {
+    'http': 'scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler',
+    'https': 'scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler',
+}
+
+PLAYWRIGHT_BROWSER_TYPE = 'chromium'
