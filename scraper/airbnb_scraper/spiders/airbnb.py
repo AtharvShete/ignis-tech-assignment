@@ -1,5 +1,7 @@
 import scrapy
 import re
+import requests
+import json
 from scrapy_playwright.page import PageMethod
 from airbnb_scraper.items import AirbnbItem
 
@@ -7,13 +9,15 @@ class AirbnbSpider(scrapy.Spider):
     name = "airbnb"
     allowed_domains = ["airbnb.co.in"]
     
-    def __init__(self, location="India", checkin="2025-04-01", checkout="2025-04-05", guests="2", *args, **kwargs):
+    def __init__(self, location="India", checkin="2025-04-01", checkout="2025-04-05", guests="2", api_url="http://localhost:8000/api/add_listing/", *args, **kwargs):
         super(AirbnbSpider, self).__init__(*args, **kwargs)
         self.start_urls = [
             f"https://www.airbnb.co.in/s/{location}/homes?checkin={checkin}&checkout={checkout}&adults={guests}"
         ]
         # Default user agent
         self.user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        # API endpoint for sending data
+        self.api_url = api_url
 
     def start_requests(self):
         """Generate initial requests for search results pages"""
@@ -411,7 +415,40 @@ class AirbnbSpider(scrapy.Spider):
         host = response.css('div.t1pxe1a4::text').get(default="")
         item['host'] = host.replace("Hosted by", "").strip() if host else None
         
+        # After all data is collected, send it to the Django backend
+        self.send_to_backend(item)
+        
         yield item
+
+    def send_to_backend(self, item):
+        """Send scraped data to Django backend via POST request"""
+        try:
+            # Convert item to a dict
+            data = dict(item)
+            
+            # Add Content-Type header
+            headers = {"Content-Type": "application/json"}
+            
+            # Make the POST request
+            self.logger.info(f"Sending data to API: {self.api_url}")
+            response = requests.post(
+                self.api_url,
+                json=data,
+                headers=headers
+            )
+            
+            # Check if request was successful
+            if response.status_code == 200 or response.status_code == 201:
+                self.logger.info(f"Successfully sent data to API. Response: {response.json()}")
+            else:
+                self.logger.error(f"Failed to send data to API. Status code: {response.status_code}, Response: {response.text}")
+        
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Error sending data to API: {e}")
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error decoding API response: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error when sending data to API: {e}")
 
     async def errback(self, failure):
         self.logger.error(f"Request failed: {failure}")
