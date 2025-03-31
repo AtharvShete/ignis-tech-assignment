@@ -121,7 +121,6 @@ class AirbnbSpider(scrapy.Spider):
 
         item['total_price'] = response.css('span._1qs94rc::text').get(default="").strip()
 
-        # Filter out map images from the image URLs
         all_image_urls = response.css('img::attr(src)').getall()
         item['image_urls'] = [url for url in all_image_urls if 'mapsresources-pa.googleapis.com' not in url]
 
