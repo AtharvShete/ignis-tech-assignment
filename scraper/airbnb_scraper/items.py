@@ -1,13 +1,9 @@
-# Define here the models for your scraped items
-#
-# See documentation in:
-# https://docs.scrapy.org/en/latest/topics/items.html
-
 import scrapy
 
 class AirbnbItem(scrapy.Item):
+    id = scrapy.Field()
     title = scrapy.Field()
-    listing_title = scrapy.Field()
+    property_type = scrapy.Field()
     location = scrapy.Field()
     price_per_night = scrapy.Field()
     currency = scrapy.Field()
@@ -17,9 +13,10 @@ class AirbnbItem(scrapy.Item):
     description = scrapy.Field()
     reviews = scrapy.Field()
     number_of_reviews = scrapy.Field()
+    review_tags = scrapy.Field()
     amenities = scrapy.Field()
+    total_amenities_count = scrapy.Field() 
     host = scrapy.Field()
-    host_name = scrapy.Field()
-    host_since = scrapy.Field()
-    host_info = scrapy.Field()
-    property_type = scrapy.Field()
+    amenities_metadata = scrapy.Field()  
+    cleaning_fee = scrapy.Field()  
+    service_fee = scrapy.Field() 
