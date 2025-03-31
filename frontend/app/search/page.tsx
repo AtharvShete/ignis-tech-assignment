@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { ListingCard } from "@/components/listing-card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { mockListings } from "@/lib/mock-data"
 
