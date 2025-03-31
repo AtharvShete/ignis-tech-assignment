@@ -1,7 +1,6 @@
 import scrapy
-import re
 from scrapy_playwright.page import PageMethod
-from airbnb_scraper.items import AirbnbItem  # Ensure this is correctly set up
+from airbnb_scraper.items import AirbnbItem
 
 class AirbnbSpider(scrapy.Spider):
     name = "airbnb"
@@ -41,8 +40,11 @@ class AirbnbSpider(scrapy.Spider):
         for a_tag in response.css("a[href*='/rooms/']"):
             href = a_tag.attrib.get("href")
             if href:
-                room_url = response.urljoin(href.split("?")[0])
-                yield scrapy.Request(
+                with open("urls.txt", "w") as f:
+                    f.write(href.strip() + "\n")
+                # Construct the full URL using response.urljoin
+                room_url = response.urljoin(href.strip())
+                room_responce = scrapy.Request(
                     room_url,
                     headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"},
                     meta={
@@ -62,6 +64,12 @@ class AirbnbSpider(scrapy.Spider):
                     callback=self.parse_room
                 )
 
+                with open('sample.html', 'w', encoding="utf-8") as f:
+                    f.write(response.text)
+
+                yield room_responce
+                break
+
         # Handle pagination
         next_page = response.css('a[aria-label="Next"]::attr(href)').get()
         if next_page:
@@ -70,10 +78,12 @@ class AirbnbSpider(scrapy.Spider):
                 "playwright_include_page": True,
                 "playwright_page_methods": [
                     PageMethod("wait_for_selector", "a[href*='/rooms/']"),
-                    PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight)"),
-                    PageMethod("wait_for_timeout", 3000),
-                    PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight)"),
-                    PageMethod("wait_for_timeout", 3000)
+                    PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight/3)"),
+                    PageMethod("wait_for_timeout", 1000),
+                    PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight/3)"),
+                    PageMethod("wait_for_timeout", 1000),
+                    PageMethod("evaluate", "window.scrollBy(0, document.body.scrollHeight/3)"),
+                    PageMethod("wait_for_timeout", 1000)
                 ],
                 "errback": self.errback,
             })
@@ -111,11 +121,11 @@ class AirbnbSpider(scrapy.Spider):
 
         item['total_price'] = response.css('span._1qs94rc::text').get(default="").strip()
 
-
-        item['image_urls'] = response.css('img::attr(src)').getall()
+        # Filter out map images from the image URLs
+        all_image_urls = response.css('img::attr(src)').getall()
+        item['image_urls'] = [url for url in all_image_urls if 'mapsresources-pa.googleapis.com' not in url]
 
         ratings_text = response.css('span.a8jt5op::text').getall()
-        rating = ""
 
         for text in ratings_text:
             if "Rated" in text:
@@ -125,6 +135,8 @@ class AirbnbSpider(scrapy.Spider):
         item['ratings'] = rating_text[1] if len(rating_text) > 1 else None
 
         item['description'] = response.css('div.d1isfkwk::text').get(default="").strip()
+
+        reviews_text =''
 
         item['reviews'] = reviews_text
         item['number_of_reviews'] = reviews_text[6] if len(reviews_text) > 6 else None
