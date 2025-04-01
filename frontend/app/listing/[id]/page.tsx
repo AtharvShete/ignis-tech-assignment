@@ -10,27 +10,46 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Star, Share, Heart, CalendarIcon, Users, Home, Coffee, Wifi, Tv, Utensils, Car, Snowflake } from "lucide-react"
-import { mockListings } from "@/lib/mock-data"
+import { getListingById } from "@/lib/api"
+import type { Listing } from "@/lib/types"
+import { Badge } from "@/components/ui/badge"
 
 export default function ListingPage() {
     const { id } = useParams()
-    const [listing, setListing] = useState<any | null>(null)
+    const [listing, setListing] = useState<Listing | null>(null)
     const [loading, setLoading] = useState(true)
     const [checkIn, setCheckIn] = useState<Date | undefined>(undefined)
     const [checkOut, setCheckOut] = useState<Date | undefined>(undefined)
     const [guests, setGuests] = useState(1)
     const [activeImage, setActiveImage] = useState(0)
     const [isFavorite, setIsFavorite] = useState(false)
+    const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
-        // Simulate API call to fetch listing details
-        setLoading(true)
-        setTimeout(() => {
-            const foundListing = mockListings.find((item) => item.id === id)
-            setListing(foundListing || null)
-            setLoading(false)
-        }, 1000)
-    }, [id])
+        setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        if (!mounted) return
+
+        async function fetchListing() {
+            setLoading(true)
+            try {
+                const result = await getListingById(id as string)
+                setListing(result)
+            } catch (error) {
+                console.error("Error fetching listing:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchListing()
+    }, [id, mounted])
+
+    if (!mounted) {
+        return null
+    }
 
     if (loading) {
         return (
@@ -87,7 +106,7 @@ export default function ListingPage() {
         if (!checkIn || !checkOut) return 0
 
         const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))
-        return listing.price_per_night * nights
+        return Number.parseFloat(listing.price_per_night) * nights
     }
 
     const totalPrice = calculateTotalPrice()
@@ -102,7 +121,7 @@ export default function ListingPage() {
                         <span className="ml-1 font-medium">{listing.ratings}</span>
                     </div>
                     <span className="text-gray-500">·</span>
-                    <span className="underline font-medium">{listing.reviews} reviews</span>
+                    <span className="underline font-medium">{listing.number_of_reviews} reviews</span>
                     <span className="text-gray-500">·</span>
                     <span className="text-gray-500">{listing.location}</span>
                 </div>
@@ -127,13 +146,13 @@ export default function ListingPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-8">
                 <div className="md:col-span-2 row-span-2 relative rounded-l-xl overflow-hidden">
                     <img
-                        src={listing.images[0] || "/placeholder.svg"}
+                        src={listing.image_urls[0] || "/placeholder.svg"}
                         alt={listing.title}
                         className="w-full h-full object-cover"
                         style={{ height: "100%", minHeight: "300px" }}
                     />
                 </div>
-                {listing.images.slice(1, 5).map((image: string, index: number) => (
+                {listing.image_urls.slice(1, 5).map((image: string, index: number) => (
                     <div
                         key={index}
                         className={`relative overflow-hidden ${index === 1 ? "rounded-tr-xl" : index === 3 ? "rounded-br-xl" : ""}`}
@@ -160,14 +179,12 @@ export default function ListingPage() {
                             <h2 className="text-xl font-semibold">
                                 {listing.property_type} in {listing.location.split(",")[0]}
                             </h2>
-                            <p className="text-gray-500 mt-1">
-                                {listing.guests} guests · {listing.bedrooms} bedrooms · {listing.beds} beds · {listing.bathrooms} baths
-                            </p>
+                            <p className="text-gray-500 mt-1">1 guest · 1 bedroom · 1 bed · 1 bath</p>
                         </div>
                         <div className="w-12 h-12 rounded-full overflow-hidden">
                             <img
-                                src={listing.host.image || "/placeholder.svg?height=50&width=50"}
-                                alt={listing.host.name}
+                                src="/placeholder.svg?height=50&width=50&text=Host"
+                                alt="Host"
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -190,7 +207,7 @@ export default function ListingPage() {
                             </div>
                             <div>
                                 <h3 className="font-semibold">Highly rated host</h3>
-                                <p className="text-gray-500">{listing.host.name} has received excellent reviews.</p>
+                                <p className="text-gray-500">{listing.host.split(" ").pop()} has received excellent reviews.</p>
                             </div>
                         </div>
 
@@ -215,7 +232,7 @@ export default function ListingPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {listing.amenities.map((amenity: string, index: number) => {
                                 const icons: Record<string, any> = {
-                                    WiFi: <Wifi className="h-5 w-5" />,
+                                    Wifi: <Wifi className="h-5 w-5" />,
                                     Kitchen: <Utensils className="h-5 w-5" />,
                                     "Free parking": <Car className="h-5 w-5" />,
                                     TV: <Tv className="h-5 w-5" />,
@@ -232,6 +249,47 @@ export default function ListingPage() {
                             })}
                         </div>
                     </div>
+
+                    <div className="mb-6 border-b pb-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold">Reviews</h3>
+                            <div className="flex items-center">
+                                <Star className="h-4 w-4 fill-current text-black" />
+                                <span className="ml-1 font-medium">{listing.ratings}</span>
+                                <span className="mx-1">·</span>
+                                <span>{listing.number_of_reviews} reviews</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {listing.review_tags.map((tag, index) => (
+                                <Badge key={index} variant="outline" className="px-3 py-1 rounded-full">
+                                    {tag.tag} ({tag.count})
+                                </Badge>
+                            ))}
+                        </div>
+
+                        <div className="space-y-6">
+                            {listing.reviews.map((review, index) => (
+                                <div key={index} className="border-b pb-6 last:border-b-0 last:pb-0">
+                                    <div className="flex items-center mb-2">
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden">
+                                            <img
+                                                src={`/placeholder.svg?height=40&width=40&text=${review.reviewer_name.charAt(0)}`}
+                                                alt={review.reviewer_name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium">{review.reviewer_name}</p>
+                                            <p className="text-gray-500 text-sm">{review.review_date}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-gray-700">{review.review_text}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Booking Card */}
@@ -240,7 +298,7 @@ export default function ListingPage() {
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <span className="text-xl font-semibold">
-                                    {listing.currency === "USD" ? "$" : "₹"} {listing.price_per_night}
+                                    {listing.currency} {Number.parseFloat(listing.price_per_night).toLocaleString()}
                                 </span>{" "}
                                 <span className="text-gray-500">night</span>
                             </div>
@@ -248,7 +306,7 @@ export default function ListingPage() {
                                 <Star className="h-4 w-4 fill-current" />
                                 <span className="ml-1">{listing.ratings}</span>
                                 <span className="text-gray-500 ml-1">·</span>
-                                <span className="text-gray-500 ml-1 underline">{listing.reviews} reviews</span>
+                                <span className="text-gray-500 ml-1 underline">{listing.number_of_reviews} reviews</span>
                             </div>
                         </div>
 
@@ -300,7 +358,7 @@ export default function ListingPage() {
                                     <Input
                                         type="number"
                                         min="1"
-                                        max={listing.guests}
+                                        max="16"
                                         placeholder="Add guests"
                                         className="pl-10"
                                         value={guests}
@@ -318,31 +376,35 @@ export default function ListingPage() {
                             <div className="mt-6 space-y-4">
                                 <div className="flex justify-between">
                                     <span className="underline">
-                                        {listing.currency === "USD" ? "$" : "₹"} {listing.price_per_night} x{" "}
+                                        {listing.currency} {Number.parseFloat(listing.price_per_night).toLocaleString()} x{" "}
                                         {Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24))} nights
                                     </span>
                                     <span>
-                                        {listing.currency === "USD" ? "$" : "₹"} {totalPrice}
+                                        {listing.currency} {totalPrice.toLocaleString()}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="underline">Cleaning fee</span>
                                     <span>
-                                        {listing.currency === "USD" ? "$" : "₹"} {listing.cleaning_fee || 50}
+                                        {listing.currency} {Number.parseFloat(listing.cleaning_fee).toLocaleString()}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="underline">Service fee</span>
                                     <span>
-                                        {listing.currency === "USD" ? "$" : "₹"} {Math.round(totalPrice * 0.15)}
+                                        {listing.currency} {Number.parseFloat(listing.service_fee).toLocaleString()}
                                     </span>
                                 </div>
                                 <hr className="my-4" />
                                 <div className="flex justify-between font-semibold">
                                     <span>Total before taxes</span>
                                     <span>
-                                        {listing.currency === "USD" ? "$" : "₹"}{" "}
-                                        {totalPrice + (listing.cleaning_fee || 50) + Math.round(totalPrice * 0.15)}
+                                        {listing.currency}{" "}
+                                        {(
+                                            totalPrice +
+                                            Number.parseFloat(listing.cleaning_fee) +
+                                            Number.parseFloat(listing.service_fee)
+                                        ).toLocaleString()}
                                     </span>
                                 </div>
                             </div>

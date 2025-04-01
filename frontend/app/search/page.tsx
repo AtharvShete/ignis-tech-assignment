@@ -5,45 +5,55 @@ import { useSearchParams } from "next/navigation"
 import { ListingCard } from "@/components/listing-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { mockListings } from "@/lib/mock-data"
+import { searchListings } from "@/lib/api"
+import type { Listing } from "@/lib/types"
 
 export default function SearchPage() {
     const searchParams = useSearchParams()
-    const [listings, setListings] = useState<any[]>([])
+    const [listings, setListings] = useState<Listing[]>([])
     const [loading, setLoading] = useState(true)
-    const [priceRange, setPriceRange] = useState([0, 1000])
-    const [minRating, setMinRating] = useState(0)
+    const [mounted, setMounted] = useState(false)
 
-    const location = searchParams.get("location") || ""
-    const checkIn = searchParams.get("checkIn") || ""
-    const checkOut = searchParams.get("checkOut") || ""
-    const guests = searchParams.get("guests") || "1"
+    // Get search parameters
+    const location = searchParams?.get("location") || ""
+    const checkIn = searchParams?.get("checkIn") || ""
+    const checkOut = searchParams?.get("checkOut") || ""
+    const guests = searchParams?.get("guests") || "1"
 
+    // Set mounted state on initial render
     useEffect(() => {
-        // Simulate API call to fetch listings
-        setLoading(true)
-        setTimeout(() => {
-            // Filter mock listings based on search params
-            let filteredListings = [...mockListings]
+        setMounted(true)
+    }, [])
 
-            if (location) {
-                filteredListings = filteredListings.filter((listing) =>
-                    listing.location.toLowerCase().includes(location.toLowerCase()),
-                )
+    // Fetch listings when mounted or search params change
+    useEffect(() => {
+        if (!mounted) return
+
+        async function fetchListings() {
+            setLoading(true)
+            try {
+                const params: Record<string, string> = { location }
+
+                if (checkIn) params.checkIn = checkIn
+                if (checkOut) params.checkOut = checkOut
+                if (guests) params.guests = guests
+
+                const results = await searchListings(params)
+                setListings(results)
+            } catch (error) {
+                console.error("Error fetching listings:", error)
+            } finally {
+                setLoading(false)
             }
+        }
 
-            // Apply price filter
-            filteredListings = filteredListings.filter(
-                (listing) => listing.price_per_night >= priceRange[0] && listing.price_per_night <= priceRange[1],
-            )
+        fetchListings()
+    }, [location, checkIn, checkOut, guests, mounted])
 
-            // Apply rating filter
-            filteredListings = filteredListings.filter((listing) => listing.ratings >= minRating)
-
-            setListings(filteredListings)
-            setLoading(false)
-        }, 1000)
-    }, [location, checkIn, checkOut, guests, priceRange, minRating])
+    // Don't render anything until component is mounted
+    if (!mounted) {
+        return null
+    }
 
     return (
         <div>
@@ -69,46 +79,38 @@ export default function SearchPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-8">
-
-                    {/* Listings grid */}
-                    <div className="flex-1">
-                        {loading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {Array(6)
-                                    .fill(0)
-                                    .map((_, i) => (
-                                        <div key={i} className="rounded-xl overflow-hidden">
-                                            <Skeleton className="h-64 w-full" />
-                                            <div className="p-4">
-                                                <Skeleton className="h-4 w-3/4 mb-2" />
-                                                <Skeleton className="h-4 w-1/2 mb-2" />
-                                                <Skeleton className="h-4 w-1/4" />
-                                            </div>
+                {/* Listings grid */}
+                <div className="w-full px-4">
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {Array(8)
+                                .fill(0)
+                                .map((_, i) => (
+                                    <div key={i} className="rounded-xl overflow-hidden">
+                                        <Skeleton className="h-64 w-full" />
+                                        <div className="p-4">
+                                            <Skeleton className="h-4 w-3/4 mb-2" />
+                                            <Skeleton className="h-4 w-1/2 mb-2" />
+                                            <Skeleton className="h-4 w-1/4" />
                                         </div>
-                                    ))}
-                            </div>
-                        ) : listings.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {listings.map((listing) => (
-                                    <ListingCard key={listing.id} listing={listing} />
+                                    </div>
                                 ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12">
-                                <h3 className="text-xl font-semibold mb-2">No listings found</h3>
-                                <p className="text-gray-500 mb-6">Try adjusting your search filters</p>
-                                <Button
-                                    onClick={() => {
-                                        setPriceRange([0, 1000])
-                                        setMinRating(0)
-                                    }}
-                                >
-                                    Clear filters
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : listings.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            {listings.map((listing) => (
+                                <ListingCard key={listing.id} listing={listing} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <h3 className="text-xl font-semibold mb-2">No listings found</h3>
+                            <p className="text-gray-500 mb-6">Try adjusting your search criteria</p>
+                            <Button asChild>
+                                <a href="/search">Clear search</a>
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

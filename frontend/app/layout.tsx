@@ -1,9 +1,9 @@
 import type React from "react"
-import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 import "@/app/globals.css"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+
 
 export default function RootLayout({
   children,
@@ -20,7 +20,6 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
-          <Toaster />
       </body>
     </html>
   )

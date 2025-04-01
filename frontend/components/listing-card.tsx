@@ -3,18 +3,10 @@
 import Link from "next/link"
 import { Heart, Star } from "lucide-react"
 import { useState } from "react"
+import type { Listing } from "@/lib/types"
 
 interface ListingCardProps {
-    listing: {
-        id: string
-        title: string
-        location: string
-        price_per_night: number
-        currency: string
-        ratings: number
-        reviews: number
-        images: string[]
-    }
+    listing: Listing
 }
 
 export function ListingCard({ listing }: ListingCardProps) {
@@ -38,7 +30,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                 <div className="rounded-xl overflow-hidden">
                     <div className="relative aspect-square overflow-hidden">
                         <img
-                            src={listing.images[0] || "/placeholder.svg"}
+                            src={listing.image_urls[0] || "/placeholder.svg"}
                             alt={listing.title}
                             className="w-full h-full object-cover transition-transform group-hover:scale-105"
                         />
@@ -54,7 +46,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                         <p className="text-gray-500 text-sm mt-1">{listing.location}</p>
                         <div className="flex items-baseline mt-1">
                             <span className="font-semibold">
-                                {listing.currency === "USD" ? "$" : "₹"} {listing.price_per_night}
+                                {listing.currency} {Number.parseFloat(listing.price_per_night).toLocaleString()}
                             </span>{" "}
                             <span className="text-sm ml-1">night</span>
                         </div>
